@@ -1,0 +1,650 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Asistente de cotizaciones · demo</title>
+<style>
+:root{
+  --ink:#14212b; --ink-2:#4a5a66; --paper:#e9eeea; --card:#fff; --line:#cfd8d3;
+  --teal:#0b6b66; --teal-d:#07514d; --amber:#f0a500;
+  --me:#d3ebd9; --warn:#8a4300; --warn-bg:#fff1dc;
+  --r-s:6px; --r-m:12px; --r-l:22px;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);
+  font:16px/1.5 "Avenir Next","Segoe UI",system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif}
+:focus-visible{outline:3px solid var(--amber);outline-offset:2px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.muted{color:var(--ink-2)}
+
+.top{max-width:1180px;margin:0 auto;padding:28px 20px 12px;display:flex;gap:20px;
+  justify-content:space-between;align-items:flex-start}
+h1{margin:0 0 6px;font-size:1.75rem;letter-spacing:-.02em;line-height:1.15}
+.top p{margin:0;max-width:64ch;color:var(--ink-2)}
+.grid{max-width:1180px;margin:0 auto;padding:12px 20px 40px;display:grid;
+  grid-template-columns:minmax(0,420px) minmax(0,1fr);gap:24px;align-items:start}
+
+/* Chat */
+.phone{background:#dfe7e2;border:1px solid var(--line);border-radius:var(--r-l);overflow:hidden;
+  display:flex;flex-direction:column;height:min(80vh,740px);position:sticky;top:12px}
+.phone-head{background:var(--teal-d);color:#fff;padding:12px 16px;display:flex;gap:12px;align-items:center}
+.phone-head small{display:block;opacity:.8}
+.av{width:38px;height:38px;border-radius:50%;background:var(--amber);color:var(--ink);
+  display:grid;place-items:center;font-weight:700;flex:none}
+.log{flex:1;overflow:auto;padding:14px;display:flex;flex-direction:column;gap:8px}
+.b{max-width:88%;padding:9px 12px;border-radius:4px 14px 14px 14px;background:#fff;
+  box-shadow:0 1px 0 rgba(0,0,0,.06);white-space:pre-line;overflow-wrap:anywhere;align-self:flex-start}
+.b.me{align-self:flex-end;background:var(--me);border-radius:14px 4px 14px 14px}
+.b.typing{color:var(--ink-2);font-style:italic}
+.b.sys{border-left:4px solid var(--amber)}
+.b .tag{display:block;font-size:.8rem;color:var(--ink-2);margin-bottom:2px}
+.b img.thumb{display:block;max-width:160px;max-height:120px;border-radius:6px;margin-top:6px}
+.sum{display:grid;gap:3px;min-width:240px;white-space:normal}
+.sum div{display:flex;justify-content:space-between;gap:16px}
+.sum div span:first-child{color:var(--ink-2)}
+.sum .tot{font-weight:700;border-top:1px solid var(--line);margin-top:4px;padding-top:5px}
+.sum .tot span:first-child{color:var(--ink)}
+.quick{display:flex;flex-wrap:wrap;gap:8px;padding:8px 12px;max-height:150px;overflow:auto;background:#dfe7e2}
+.chip{border:1px solid var(--teal);background:#fff;color:var(--teal-d);border-radius:999px;
+  padding:7px 13px;font:inherit;font-size:.92rem;cursor:pointer}
+.chip:hover{background:var(--teal);color:#fff}
+.composer{display:flex;gap:8px;padding:10px 12px;background:#cfd9d3}
+.composer input{flex:1;min-width:0;border:1px solid var(--line);border-radius:999px;padding:10px 14px;font:inherit}
+.send{border:0;background:var(--teal);color:#fff;border-radius:999px;padding:0 18px;font:inherit;cursor:pointer}
+
+/* Panel */
+.panel{background:var(--card);border:1px solid var(--line);border-radius:var(--r-m);min-height:560px}
+.tabs{display:flex;border-bottom:1px solid var(--line);overflow-x:auto}
+.tab{flex:1;white-space:nowrap;padding:14px 16px;border:0;background:none;font:inherit;font-weight:600;
+  color:var(--ink-2);cursor:pointer;border-bottom:3px solid transparent}
+.tab[aria-selected=true]{color:var(--teal-d);border-bottom-color:var(--teal)}
+.pane{padding:20px}
+.pane[hidden]{display:none}
+.btn{border:1px solid var(--teal);background:#fff;color:var(--teal-d);border-radius:var(--r-s);
+  padding:8px 14px;font:inherit;font-size:.92rem;cursor:pointer}
+.btn.primary{background:var(--teal);color:#fff}
+.btn:hover{filter:brightness(.94)}
+.ghost{border:1px solid var(--ink-2);background:transparent;color:var(--ink);border-radius:var(--r-s);
+  padding:8px 14px;font:inherit;cursor:pointer;white-space:nowrap}
+.actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+
+/* Cotización */
+.doc{position:relative;border:1px solid var(--line);border-radius:var(--r-s);padding:28px;
+  overflow:hidden;background:#fff}
+.doc::after{content:"DEMO · SIN VALIDEZ COMERCIAL";position:absolute;inset:0;display:grid;place-items:center;
+  font-size:2.6rem;font-weight:800;color:rgba(20,33,43,.07);transform:rotate(-24deg);
+  pointer-events:none;text-align:center;line-height:1.1;padding:20px}
+.doc h2{margin:0;font-size:1.4rem;letter-spacing:-.01em}
+.doc-head{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:18px}
+.doc-head .r{text-align:right}
+.doc h3{font-size:.95rem;margin:18px 0 6px}
+table.lines{width:100%;border-collapse:collapse;margin-top:6px}
+table.lines th,table.lines td{padding:8px 6px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+table.lines th{font-size:.85rem;color:var(--ink-2);font-weight:600}
+table.lines .num{text-align:right;white-space:nowrap}
+.small{font-size:.85rem;color:var(--ink-2);display:block}
+.totals{margin:12px 0 0 auto;max-width:280px;display:grid;gap:3px}
+.totals div{display:flex;justify-content:space-between}
+.totals .grand{font-weight:700;font-size:1.1rem;border-top:2px solid var(--ink);margin-top:4px;padding-top:6px}
+.cond{margin:0;padding-left:18px}
+.cond li{margin-bottom:3px}
+.logo-prev{max-width:110px;max-height:80px;border:1px solid var(--line);border-radius:6px;display:block;margin-top:6px}
+.disclaimer{margin-top:18px;font-size:.82rem;color:var(--ink-2)}
+
+/* Panel vendedor */
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:18px}
+.kpi{border:1px solid var(--line);border-radius:var(--r-s);padding:12px}
+.kpi b{display:block;font-size:1.3rem}
+.kpi span{color:var(--ink-2);font-size:.88rem}
+.lead{border:1px solid var(--line);border-radius:var(--r-s);padding:14px;margin-bottom:12px}
+.lead.seed{background:#f5f8f6}
+.lead-top{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start}
+.lead h3{margin:0;font-size:1rem}
+.status{display:inline-block;padding:2px 10px;border-radius:999px;font-size:.82rem;font-weight:600;border:1px solid}
+.st-pend{background:var(--warn-bg);color:var(--warn);border-color:#e4b878}
+.st-sent{background:#e3f1f0;color:var(--teal-d);border-color:#9bcac6}
+.st-follow{background:#e7ecf8;color:#2b3f7a;border-color:#aab8e0}
+.st-won{background:var(--teal);color:#fff;border-color:var(--teal)}
+.tl{list-style:none;margin:10px 0 0;padding:0}
+.tl li{display:flex;gap:10px;align-items:center;padding:3px 0;color:var(--ink-2)}
+.tl .dot{width:18px;height:18px;border-radius:50%;border:2px solid var(--line);display:grid;
+  place-items:center;font-size:.7rem;flex:none}
+.tl li.done{color:var(--ink)}
+.tl li.done .dot{background:var(--teal);border-color:var(--teal);color:#fff}
+.why{margin:10px 0 0;padding:8px 12px 8px 28px;background:var(--warn-bg);border-radius:var(--r-s);color:var(--warn);font-size:.9rem}
+.sub{font-size:.95rem;margin:20px 0 10px;color:var(--ink-2)}
+
+/* Reglas */
+.rules h3{font-size:1rem;margin:22px 0 8px}
+.rules h3:first-child{margin-top:0}
+.rules table{width:100%;border-collapse:collapse}
+.rules td,.rules th{padding:6px 4px;border-bottom:1px solid var(--line);text-align:left}
+.rules th{font-size:.85rem;color:var(--ink-2);font-weight:600}
+.in{width:120px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;font:inherit}
+.in.wide{width:100%;max-width:280px}
+.note{background:#f5f8f6;border:1px solid var(--line);border-radius:var(--r-s);padding:10px 12px;font-size:.9rem;color:var(--ink-2)}
+
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--ink);color:#fff;
+  padding:10px 16px;border-radius:var(--r-s);max-width:min(90vw,520px);opacity:0;pointer-events:none;
+  transition:opacity .2s}
+.toast.show{opacity:1}
+
+@media (max-width:960px){
+  .grid{grid-template-columns:1fr}
+  .phone{position:static;height:74vh}
+  .kpis{grid-template-columns:1fr}
+  .top{flex-direction:column}
+}
+@media (prefers-reduced-motion:reduce){ .toast{transition:none} }
+@media print{
+  body{background:#fff}
+  body *{visibility:hidden}
+  #doc,#doc *{visibility:visible}
+  #doc{position:absolute;left:0;top:0;width:100%;border:0}
+  .noprint{display:none!important}
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <div>
+    <h1>Asistente de cotizaciones</h1>
+    <p>Demo de concepto para WORK-CNC. Los precios base vienen de su sitio público y catálogo. Los descuentos, plazos y condiciones son ejemplos que se editan en la pestaña Reglas de precio.</p>
+  </div>
+  <button id="restart" class="ghost" type="button">Empezar otra conversación</button>
+</header>
+
+<main class="grid">
+  <section class="phone" aria-label="Conversación con el asistente">
+    <div class="phone-head">
+      <span class="av" aria-hidden="true">A</span>
+      <div><strong>Asistente de cotizaciones</strong><small>En línea · responde en segundos</small></div>
+    </div>
+    <div id="log" class="log" role="log" aria-live="polite"></div>
+    <div id="quick" class="quick"></div>
+    <form id="form" class="composer" autocomplete="off">
+      <label class="sr" for="msg">Escribe un mensaje</label>
+      <input id="msg" placeholder="Escribe aquí o usa los botones">
+      <button class="send" type="submit">Enviar</button>
+    </form>
+    <input id="file" type="file" hidden accept="image/*,.pdf,.ai,.svg,.eps">
+  </section>
+
+  <section id="panel" class="panel" aria-label="Resultados del asistente">
+    <div class="tabs" role="tablist">
+      <button class="tab" role="tab" id="t-quote" aria-controls="p-quote" aria-selected="true" data-tab="quote">Cotización</button>
+      <button class="tab" role="tab" id="t-sales" aria-controls="p-sales" aria-selected="false" data-tab="sales">Panel del vendedor</button>
+      <button class="tab" role="tab" id="t-rules" aria-controls="p-rules" aria-selected="false" data-tab="rules">Reglas de precio</button>
+    </div>
+    <div class="pane" id="p-quote" role="tabpanel" aria-labelledby="t-quote"><div id="quote"></div></div>
+    <div class="pane" id="p-sales" role="tabpanel" aria-labelledby="t-sales" hidden><div id="leads"></div></div>
+    <div class="pane rules" id="p-rules" role="tabpanel" aria-labelledby="t-rules" hidden><div id="rules"></div></div>
+  </section>
+</main>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<script>
+'use strict';
+/* ---------- utilidades ---------- */
+const CLP = n => new Intl.NumberFormat('es-CL',{style:'currency',currency:'CLP',maximumFractionDigits:0}).format(n);
+const $ = s => document.querySelector(s);
+const norm = s => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+function h(tag, attrs, ...kids){
+  const e = document.createElement(tag);
+  for (const [k,v] of Object.entries(attrs||{})) {
+    if (k === 'class') e.className = v;
+    else if (k.startsWith('on')) e.addEventListener(k.slice(2), v);
+    else if (v !== null && v !== undefined) e.setAttribute(k, v);
+  }
+  for (const k of kids.flat()) { if (k !== null && k !== undefined && k !== false) e.append(k); }
+  return e;
+}
+const btn = (label, fn, primary) => h('button',{type:'button',class:'btn'+(primary?' primary':''),onclick:fn},label);
+const fmtDate = d => d.toLocaleDateString('es-CL',{day:'numeric',month:'long',year:'numeric'});
+
+/* ---------- datos: precios base del sitio público y catálogo ---------- */
+const cfg = { issuer:'WORK-CNC (demo)', validDays:15, approvalTotal:1500000, approvalQty:500, prepay:50 };
+// Descuentos por volumen: SUPUESTO de demo, editable en la pestaña Reglas.
+const TIERS = [{min:1,d:0},{min:10,d:5},{min:50,d:10},{min:100,d:15},{min:300,d:20}];
+const PRODUCTS = [
+  {id:'piocha',name:'ECO-Piocha',kw:['piocha','name tag','nametag'],q:'¿Qué versión de piocha?',
+    variants:[{n:'Bicolor, grabado láser',p:2990},{n:'Fullcolor, EcoPrint UV',p:4990}],note:'Con broche de hierro'},
+  {id:'pin',name:'ECO-Pin',kw:['pin'],q:'¿Qué versión de pin?',
+    variants:[{n:'Bicolor',p:2990},{n:'Fullcolor',p:2990}],note:'Tamaño adaptable de 2,5 a 3 cm'},
+  {id:'medalla',name:'Medalla de madera',kw:['medalla'],q:'¿Qué versión de medalla?',
+    variants:[{n:'Versión base',p:3990},{n:'Versión premium',p:6990}],note:'Madera reciclada con acabado en durolac blanco'},
+  {id:'virtus',name:'Galvano Virtus',kw:['virtus'],
+    variants:[{n:'Galvano Virtus',p:21990}],note:'Terciado mueblista, acrílico con impresión fullcolor'},
+  {id:'galvano',name:'Galvano Essential',kw:['galvano','reconocimiento','trofeo'],q:'¿Qué formato de galvano?',
+    variants:[{n:'Formato chico',p:7990},{n:'Formato grande',p:17990}],note:'Madera chapa eucaliptus'},
+  {id:'lampara',name:'Lámpara LED con logo',kw:['lampara','led'],
+    variants:[{n:'Lámpara LED con logo',p:24990}],note:'Grabado de alta calidad'},
+  {id:'lanyard',name:'Lanyard de color',kw:['lanyard','cordon'],
+    variants:[{n:'Lanyard de color',p:990}],note:'Precio de oferta publicado en la tienda'},
+  {id:'calibre',name:'Calibre de frutas',kw:['calibre','fruta'],q:'¿Para qué fruta?',
+    variants:[{n:'Ciruelas',p:4990},{n:'Uvas',p:14990},{n:'Berries',p:5990}],note:''}
+];
+const DEADLINES = [
+  {t:'Urgente, menos de 7 días',urgent:true},
+  {t:'En unas 2 semanas',urgent:false},
+  {t:'Sin apuro, más de un mes',urgent:false}
+];
+const REGIONS = [
+  {t:'Región Metropolitana',txt:'Despacho a domicilio en la RM, 3 a 5 días hábiles según cobertura.'},
+  {t:'Otra región',txt:'Despacho por pagar en Starken o sucursal de Chilexpress.'}
+];
+const SEEDS = [
+  {name:'Clínica Ejemplo',item:'120 ECO-Piochas fullcolor',amount:509040,status:'Seguimiento'},
+  {name:'Bodega Ejemplo',item:'300 calibres de uvas',amount:3597600,status:'Pendiente de aprobación'},
+  {name:'Club Deportivo Ejemplo',item:'60 medallas de madera',amount:215460,status:'Cerrada'}
+];
+
+/* ---------- cálculo ---------- */
+const sortedTiers = () => [...TIERS].sort((a,b)=>a.min-b.min);
+const tierFor = q => sortedTiers().filter(t=>t.min<=q).pop() || {min:1,d:0};
+const nextTier = q => sortedTiers().find(t=>t.min>q);
+function calc(snap){
+  const base = snap.variant.p, t = tierFor(snap.qty);
+  const unit = Math.round(base*(1-t.d/100));
+  const total = unit*snap.qty, neto = Math.round(total/1.19);
+  return {base, disc:t.d, unit, qty:snap.qty, total, neto, iva:total-neto};
+}
+const descOf = s => s.variant.n===s.product.name ? s.product.name : s.product.name+' · '+s.variant.n;
+const prepayOf = q => Math.round(q.total*cfg.prepay/100);
+
+/* ---------- estado ---------- */
+let S, busy = false, quoteSeq = 0;
+const leads = [];
+const fresh = () => ({step:'product',product:null,variant:null,qty:null,deadline:null,region:null,logo:null,client:null,returnToReview:false});
+
+/* ---------- chat ---------- */
+const log = $('#log'), quick = $('#quick');
+function bubble(who, content){
+  const b = h('div',{class:'b '+who});
+  b.append(content);
+  log.append(b); log.scrollTop = log.scrollHeight; return b;
+}
+function bot(text){
+  return new Promise(res=>{
+    const t = h('div',{class:'b bot typing','aria-hidden':'true'},'escribiendo…');
+    log.append(t); log.scrollTop = log.scrollHeight;
+    setTimeout(()=>{ t.remove(); bubble('bot',text); res(); }, 380);
+  });
+}
+function sys(tag, text){ bubble('bot sys', h('div',{}, h('span',{class:'tag'},tag), text)); }
+function setQuick(list){ quick.replaceChildren(...list); }
+async function run(fn){
+  if (busy) return;
+  busy = true; setQuick([]);
+  try { await fn(); } finally { busy = false; }
+}
+function chip(label, fn, echo){
+  return h('button',{type:'button',class:'chip',onclick:()=>{
+    if (busy) return;
+    bubble('me', echo || label); run(fn);
+  }}, label);
+}
+function toast(msg){
+  const t = $('#toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toast.id); toast.id = setTimeout(()=>t.classList.remove('show'), 3800);
+}
+
+/* chips por paso, para volver a mostrarlas si el cliente escribe algo que no entiendo */
+function chipsFor(step){
+  switch(step){
+    case 'product': return PRODUCTS.map(p=>chip(p.name,()=>pickProduct(p)));
+    case 'variant': return S.product.variants.map(v=>chip(v.n+' · '+CLP(v.p),()=>pickVariant(v),v.n));
+    case 'qty': return [25,50,100,250,500].map(n=>chip(String(n),()=>pickQty(n)));
+    case 'deadline': return DEADLINES.map(d=>chip(d.t,()=>pickDeadline(d)));
+    case 'region': return REGIONS.map(r=>chip(r.t,()=>pickRegion(r)));
+    case 'logo': return [
+      chip('Adjuntar logo',async()=>{ $('#file').click(); setQuick(chipsFor('logo')); },'Voy a adjuntar el logo'),
+      chip('Aún no lo tengo',skipLogo)];
+    case 'client': return [chip('Usar datos de ejemplo',()=>setClient({name:'Constructora Ejemplo SpA',email:'compras@ejemplo.cl'}))];
+    case 'review': return [
+      chip('Generar cotización',()=>generate(false)),
+      chip('Cambiar cantidad',()=>{ S.returnToReview = true; return askQty(); },'Quiero cambiar la cantidad'),
+      chip('Hablar con un asesor',()=>generate(true))];
+    case 'done': return [chip('Nueva cotización',askNewQuote,'Quiero otra cotización')];
+    default: return [];
+  }
+}
+
+/* ---------- flujo ---------- */
+async function askProduct(){
+  S.step = 'product';
+  await bot('Hola, soy el asistente de cotizaciones. Dime qué producto necesitas o elige uno de la lista.');
+  setQuick(chipsFor('product'));
+}
+async function pickProduct(p){
+  S.product = p;
+  if (p.variants.length > 1){
+    S.step = 'variant'; await bot(p.q); setQuick(chipsFor('variant'));
+  } else {
+    S.variant = p.variants[0];
+    await bot(p.name+': precio base '+CLP(S.variant.p)+' por unidad.'+(p.note?' '+p.note+'.':''));
+    await askQty();
+  }
+}
+async function pickVariant(v){
+  S.variant = v;
+  await bot('Anotado: '+descOf(S)+'. Precio base '+CLP(v.p)+' por unidad.'+(S.product.note?' '+S.product.note+'.':''));
+  await askQty();
+}
+async function askQty(){
+  S.step = 'qty';
+  await bot('¿Cuántas unidades necesitas? Elige una cantidad o escríbela.');
+  setQuick(chipsFor('qty'));
+}
+async function pickQty(n){
+  S.qty = n;
+  const t = tierFor(n), nx = nextTier(n);
+  let msg = n+' unidades.';
+  if (t.d > 0) msg += ' Aplica '+t.d+'% de descuento por volumen.';
+  if (nx) msg += ' Desde '+nx.min+' unidades el descuento sube a '+nx.d+'%.';
+  await bot(msg);
+  if (S.returnToReview){ S.returnToReview = false; return review(); }
+  await askDeadline();
+}
+async function askDeadline(){
+  S.step = 'deadline'; await bot('¿Para cuándo lo necesitas?'); setQuick(chipsFor('deadline'));
+}
+async function pickDeadline(d){
+  S.deadline = d;
+  if (d.urgent) await bot('Anotado. Con un plazo tan corto, producción confirma la fecha antes de comprometerla.');
+  await askRegion();
+}
+async function askRegion(){
+  S.step = 'region'; await bot('¿A dónde lo enviamos?'); setQuick(chipsFor('region'));
+}
+async function pickRegion(r){ S.region = r; await askLogo(); }
+async function askLogo(){
+  S.step = 'logo';
+  await bot('¿Tienes el logo o el diseño? Adjúntalo aquí. Nuestro equipo revisa tamaño, contraste y capas antes de producir.');
+  setQuick(chipsFor('logo'));
+}
+async function skipLogo(){
+  S.logo = null;
+  await bot('Sin problema, el equipo de diseño te ayuda a prepararlo.');
+  await askClient();
+}
+async function askClient(){
+  S.step = 'client';
+  await bot('Última cosa: ¿a nombre de quién emito la cotización? Escribe empresa y correo, por ejemplo:\nConstructora Ejemplo, compras@ejemplo.cl');
+  setQuick(chipsFor('client'));
+}
+async function setClient(c){ S.client = c; await review(); }
+async function review(){
+  S.step = 'review';
+  const q = calc(S);
+  const row = (k,v)=>h('div',{},h('span',{},k),h('span',{},v));
+  const node = h('div',{class:'sum'},
+    row('Producto',descOf(S)), row('Cantidad',String(q.qty)),
+    row('Precio unitario',CLP(q.unit)+(q.disc?' (-'+q.disc+'%)':'')),
+    row('Plazo',S.deadline.t), row('Envío',S.region.t),
+    row('Logo',S.logo?S.logo.name:'Pendiente'),
+    h('div',{class:'tot'},h('span',{},'Total con IVA'),h('span',{},CLP(q.total))));
+  await bot('Este es el resumen:');
+  bubble('bot', node);
+  setQuick(chipsFor('review'));
+}
+function makeLead(handoff){
+  const q = calc(S);
+  const big = q.total>=cfg.approvalTotal || q.qty>=cfg.approvalQty;
+  const reasons = [];
+  if (handoff) reasons.push('El cliente pidió hablar con una persona.');
+  if (big) reasons.push('Monto o cantidad sobre el límite de aprobación ('+CLP(cfg.approvalTotal)+' o '+cfg.approvalQty+' unidades).');
+  if (S.deadline.urgent) reasons.push('Plazo urgente: confirmar con producción.');
+  if (!S.logo) reasons.push('Logo pendiente: requiere asesoría gráfica.');
+  const needsApproval = !handoff && (big || S.deadline.urgent);
+  quoteSeq++;
+  const lead = {
+    num:'DEMO-'+String(quoteSeq).padStart(4,'0'), date:new Date(), snap:{...S}, q, reasons, needsApproval, handoff,
+    status: handoff ? 'Pidió asesor' : needsApproval ? 'Pendiente de aprobación' : 'Enviada',
+    ev:{approved:false, sent:!handoff && !needsApproval, d2:false, d5:false, paid:false}
+  };
+  leads.unshift(lead);
+  return lead;
+}
+async function generate(handoff){
+  const lead = makeLead(handoff);
+  S.step = 'done';
+  renderLeads();
+  if (handoff){
+    showTab('sales');
+    await bot('Listo, un asesor recibe tu resumen y te contacta hoy.');
+  } else {
+    renderQuote(lead); showTab('quote');
+    if (lead.needsApproval){
+      await bot('Tu cotización '+lead.num+' quedó lista. Por el monto o el plazo, un asesor la revisa antes de enviarla. Te respondemos hoy.');
+    } else {
+      await bot('Listo. Te envié la cotización '+lead.num+' a '+S.client.email+' (simulado). Vale '+cfg.validDays+' días. Si no tengo noticias tuyas, te escribo en 2 días.');
+    }
+    await bot('Puedes verla en la pestaña Cotización y el seguimiento en Panel del vendedor.');
+  }
+  setQuick(chipsFor('done'));
+}
+async function askNewQuote(){ S = fresh(); await askProduct(); }
+
+/* texto libre */
+function matchProduct(n){ return PRODUCTS.find(p=>p.kw.some(k=>n.includes(k))); }
+async function handleText(t){
+  const n = norm(t);
+  switch(S.step){
+    case 'product': {
+      const p = matchProduct(n);
+      if (p) return pickProduct(p);
+      await bot('Ese producto no está en mi lista de ejemplo. Elige uno de los botones.'); break;
+    }
+    case 'variant': {
+      const v = S.product.variants.find((v,i)=>n===String(i+1) || (n.length>=3 && (norm(v.n).includes(n) || n.includes(norm(v.n.split(',')[0])))));
+      if (v) return pickVariant(v);
+      await bot('No entendí la versión. Elige una de las opciones.'); break;
+    }
+    case 'qty': {
+      const num = parseInt(t.replace(/[^\d]/g,''),10);
+      if (num>=1 && num<=100000) return pickQty(num);
+      await bot('Escribe la cantidad como número, por ejemplo 80.'); break;
+    }
+    case 'deadline': {
+      const d = /urgente|rapido|pronto/.test(n)?DEADLINES[0] : /semana/.test(n)?DEADLINES[1] : /apuro|mes/.test(n)?DEADLINES[2] : null;
+      if (d) return pickDeadline(d);
+      await bot('Elige un plazo de las opciones.'); break;
+    }
+    case 'region': {
+      const r = /metropol|\brm\b|santiago/.test(n)?REGIONS[0] : /region|valpara|biobio|concepcion|norte|sur/.test(n)?REGIONS[1] : null;
+      if (r) return pickRegion(r);
+      await bot('Dime si es Región Metropolitana u otra región.'); break;
+    }
+    case 'logo': {
+      if (/^(no|aun|todavia)/.test(n)) return skipLogo();
+      await bot('Usa el botón Adjuntar logo, o elige "Aún no lo tengo".'); break;
+    }
+    case 'client': {
+      const m = t.match(/[^\s@,;]+@[^\s@,;]+\.[^\s@,;]+/);
+      if (!m){ await bot('Me falta un correo para enviarte la cotización. Escribe empresa y correo.'); break; }
+      const name = t.replace(m[0],'').replace(/[,;|]+/g,' ').replace(/\s+/g,' ').trim();
+      if (!name){ await bot('Me falta el nombre de la empresa.'); break; }
+      return setClient({name, email:m[0]});
+    }
+    case 'review': await bot('Elige una de las opciones de abajo para continuar.'); break;
+    case 'done': {
+      const p = matchProduct(n);
+      if (p){ S = fresh(); return pickProduct(p); }
+      await bot('Si quieres otra cotización, dime el producto o usa el botón.'); break;
+    }
+  }
+  setQuick(chipsFor(S.step));
+}
+$('#form').addEventListener('submit', e=>{
+  e.preventDefault();
+  const t = $('#msg').value.trim();
+  if (!t || busy) return;
+  $('#msg').value = '';
+  bubble('me', t);
+  run(()=>handleText(t));
+});
+$('#file').addEventListener('change', e=>{
+  const f = e.target.files[0];
+  e.target.value = '';
+  if (!f || S.step !== 'logo' || busy) return;
+  run(async()=>{
+    const isImg = f.type.startsWith('image/');
+    S.logo = {name:f.name, url:isImg ? URL.createObjectURL(f) : null};
+    const c = h('div',{},'Logo adjunto: '+f.name);
+    if (S.logo.url) c.append(h('img',{class:'thumb',src:S.logo.url,alt:'Vista previa del logo adjunto'}));
+    bubble('me', c);
+    await bot('Recibido. Nuestro equipo de diseño lo revisa y, si hace falta, te propone ajustes.');
+    await askClient();
+  });
+});
+$('#restart').addEventListener('click', ()=>{ busy = false; start(); });
+function start(){ S = fresh(); log.replaceChildren(); setQuick([]); run(askProduct); }
+
+/* ---------- acciones del vendedor ---------- */
+function approve(l){
+  l.status = 'Enviada'; l.ev.approved = true; l.ev.sent = true;
+  sys('Aviso al cliente', l.handoff
+    ? 'Un asesor te envió la cotización '+l.num+' a '+l.snap.client.email+'.'
+    : 'Un asesor aprobó la cotización '+l.num+'. Te la enviamos a '+l.snap.client.email+'.');
+  renderLeads();
+}
+function advance(l, day){
+  if (day === 2){
+    l.ev.d2 = true; l.status = 'Seguimiento';
+    sys('Mensaje automático · día 2','Hola, ¿pudiste revisar la cotización '+l.num+'? Si quieres ajustar cantidad o plazo, lo vemos ahora mismo.');
+  } else {
+    l.ev.d5 = true;
+    sys('Mensaje automático · día 5','Última consulta por la cotización '+l.num+': vence el '+fmtDate(new Date(l.date.getTime()+cfg.validDays*86400000))+'. Puedes reservar con el anticipo de '+CLP(prepayOf(l.q))+' en este link: [link de pago simulado]');
+  }
+  renderLeads();
+}
+function pay(l){
+  l.status = 'Cerrada'; l.ev.paid = true;
+  sys('Pago recibido (simulado)','Recibimos tu anticipo de '+CLP(prepayOf(l.q))+'. Tu pedido pasa a producción y te enviamos la prueba del diseño para aprobar.');
+  toast('Venta cerrada: anticipo de '+CLP(prepayOf(l.q))+' (simulado).');
+  renderLeads();
+}
+
+/* ---------- pestañas ---------- */
+function showTab(name){
+  document.querySelectorAll('.tab').forEach(b=>b.setAttribute('aria-selected', String(b.dataset.tab===name)));
+  ['quote','sales','rules'].forEach(k=>{ $('#p-'+k).hidden = k!==name; });
+  if (matchMedia('(max-width:960px)').matches){
+    $('#panel').scrollIntoView({block:'start',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});
+  }
+}
+document.querySelectorAll('.tab').forEach(b=>b.addEventListener('click',()=>showTab(b.dataset.tab)));
+
+/* ---------- cotización ---------- */
+function renderQuote(l){
+  const root = $('#quote');
+  if (!l){
+    root.replaceChildren(h('p',{class:'muted'},'Todavía no hay cotización. Completa la conversación con el asistente y aparecerá aquí.'));
+    return;
+  }
+  const {snap:s, q} = l;
+  const until = new Date(l.date.getTime()+cfg.validDays*86400000);
+  const th = (t,c)=>h('th',{class:c||''},t);
+  const td = (t,c)=>h('td',{class:c||''},t);
+  const row = (k,v)=>h('div',{},h('span',{},k),h('span',{},v));
+  root.replaceChildren(
+    h('div',{class:'doc',id:'doc'},
+      h('div',{class:'doc-head'},
+        h('div',{},h('h2',{},cfg.issuer),h('span',{class:'small'},'Cotización de productos personalizados')),
+        h('div',{class:'r'},h('strong',{},'Cotización N° '+l.num),h('span',{class:'small'},'Fecha: '+fmtDate(l.date)),h('span',{class:'small'},'Válida hasta: '+fmtDate(until)))),
+      h('h3',{},'Cliente'),
+      h('div',{},s.client.name,h('span',{class:'small'},s.client.email)),
+      h('table',{class:'lines'},
+        h('thead',{},h('tr',{},th('Descripción'),th('Cant.','num'),th('Precio base','num'),th('Desc.','num'),th('Total','num'))),
+        h('tbody',{},h('tr',{},
+          h('td',{},descOf(s),s.product.note?h('span',{class:'small'},s.product.note):null),
+          td(String(q.qty),'num'), td(CLP(q.base),'num'), td(q.disc?'-'+q.disc+'%':'—','num'), td(CLP(q.total),'num')))),
+      h('div',{class:'totals'},
+        row('Neto',CLP(q.neto)), row('IVA 19%',CLP(q.iva)),
+        h('div',{class:'grand'},h('span',{},'Total'),h('span',{},CLP(q.total)))),
+      h('h3',{},'Condiciones'),
+      h('ul',{class:'cond'},
+        h('li',{},'Plazo solicitado: '+s.deadline.t+'. El plazo de producción se confirma al aprobar el diseño.'),
+        h('li',{},s.region.txt),
+        h('li',{},'Para iniciar la producción: anticipo del '+cfg.prepay+'% ('+CLP(prepayOf(q))+').'),
+        h('li',{},s.logo?'Logo recibido: '+s.logo.name+'. Diseño revisa tamaño, contraste y capas.':'Logo pendiente: el equipo de diseño asesora la preparación.')),
+      s.logo&&s.logo.url?h('img',{class:'logo-prev',src:s.logo.url,alt:'Logo adjunto'}):null,
+      h('p',{class:'disclaimer'},'Documento de demostración generado automáticamente. No tiene validez comercial ni tributaria.')),
+    h('div',{class:'actions noprint'},
+      btn('Imprimir o guardar como PDF',()=>window.print(),true),
+      btn('Pagar anticipo (simulado)',()=>toast('Simulado: aquí se abriría el link de pago por '+CLP(prepayOf(q))+' (WebPay o Flow).'))));
+}
+
+/* ---------- panel del vendedor ---------- */
+const stClass = s => ({'Pendiente de aprobación':'st-pend','Pidió asesor':'st-pend','Enviada':'st-sent','Seguimiento':'st-follow','Cerrada':'st-won'}[s]||'st-sent');
+function leadCard(l){
+  const acts = [];
+  if (l.status==='Pendiente de aprobación' || l.status==='Pidió asesor')
+    acts.push(btn(l.handoff?'Enviar cotización':'Aprobar y enviar',()=>approve(l),true));
+  if (l.ev.sent && !l.ev.d2 && l.status!=='Cerrada') acts.push(btn('Pasar al día 2',()=>advance(l,2)));
+  if (l.ev.d2 && !l.ev.d5 && l.status!=='Cerrada') acts.push(btn('Pasar al día 5',()=>advance(l,5)));
+  if (l.ev.sent && l.status!=='Cerrada') acts.push(btn('Marcar anticipo pagado',()=>pay(l),true));
+  acts.push(btn('Ver cotización',()=>{ renderQuote(l); showTab('quote'); }));
+  const steps = [['Cotización generada',true]];
+  if (l.needsApproval || l.handoff) steps.push(['Revisión de un asesor',l.ev.approved]);
+  steps.push(['Enviada al cliente (simulado)',l.ev.sent],['Recordatorio por WhatsApp, día 2',l.ev.d2],
+    ['Último aviso con link de pago, día 5',l.ev.d5],['Anticipo pagado, pasa a producción',l.ev.paid]);
+  return h('article',{class:'lead'},
+    h('div',{class:'lead-top'},
+      h('div',{},h('h3',{},l.snap.client.name),h('span',{class:'small'},l.num+' · '+l.q.qty+' × '+descOf(l.snap)+' · '+CLP(l.q.total))),
+      h('span',{class:'status '+stClass(l.status)},l.status)),
+    h('ul',{class:'tl'},steps.map(([t,d])=>h('li',{class:d?'done':''},h('span',{class:'dot','aria-hidden':'true'},d?'✓':''),h('span',{class:'sr'},d?'Hecho: ':'Pendiente: '),t))),
+    l.reasons.length ? h('ul',{class:'why'},l.reasons.map(r=>h('li',{},r))) : null,
+    h('div',{class:'actions'},acts));
+}
+function seedCard(s){
+  return h('article',{class:'lead seed'},
+    h('div',{class:'lead-top'},
+      h('div',{},h('h3',{},s.name),h('span',{class:'small'},s.item+' · '+CLP(s.amount))),
+      h('span',{class:'status '+stClass(s.status)},s.status)));
+}
+function renderLeads(){
+  const count = leads.length + SEEDS.length;
+  const amount = leads.reduce((a,l)=>a+l.q.total,0) + SEEDS.reduce((a,s)=>a+s.amount,0);
+  const won = leads.filter(l=>l.status==='Cerrada').length + SEEDS.filter(s=>s.status==='Cerrada').length;
+  const kpi = (label,val)=>h('div',{class:'kpi'},h('b',{},val),h('span',{},label));
+  const nodes = [
+    h('div',{class:'kpis'},kpi('Cotizaciones',String(count)),kpi('Monto cotizado',CLP(amount)),kpi('Cerradas',String(won))),
+    ...leads.map(leadCard),
+    leads.length ? null : h('p',{class:'muted'},'Las cotizaciones que genere el asistente aparecen aquí, con su seguimiento y las acciones del vendedor.'),
+    h('h3',{class:'sub'},'Ejemplos precargados (datos ficticios)'),
+    ...SEEDS.map(seedCard)
+  ];
+  $('#leads').replaceChildren(...nodes.filter(Boolean));
+}
+
+/* ---------- reglas editables ---------- */
+function renderRules(){
+  const num = (val,onChange,min)=>h('input',{type:'number',class:'in',value:String(val),min:String(min),step:'1',
+    onchange:e=>{ const v = Number(e.target.value); if (Number.isFinite(v) && v>=min) onChange(v); else e.target.value = String(val); }});
+  const txt = (val,onChange)=>h('input',{type:'text',class:'in wide',value:val,onchange:e=>{ if (e.target.value.trim()) onChange(e.target.value.trim()); }});
+  const prodRows = PRODUCTS.flatMap(p=>p.variants.map(v=>h('tr',{},
+    h('td',{},p.name),h('td',{},v.n),h('td',{},num(v.p,x=>{v.p=x;},0)))));
+  $('#rules').replaceChildren(
+    h('div',{class:'note'},'Los precios base son los publicados en el sitio y el catálogo (se asume que incluyen IVA). Los descuentos por volumen, el anticipo, la validez y los límites de aprobación son supuestos de demo: cámbialos y genera una cotización nueva para ver el efecto.'),
+    h('h3',{},'Precio base por unidad (CLP)'),
+    h('table',{},h('thead',{},h('tr',{},h('th',{},'Producto'),h('th',{},'Versión'),h('th',{},'Precio'))),h('tbody',{},prodRows)),
+    h('h3',{},'Descuento por volumen'),
+    h('table',{},h('thead',{},h('tr',{},h('th',{},'Desde (unidades)'),h('th',{},'Descuento (%)'))),
+      h('tbody',{},TIERS.map(t=>h('tr',{},h('td',{},num(t.min,x=>{t.min=x;},1)),h('td',{},num(t.d,x=>{t.d=x;},0)))))),
+    h('h3',{},'Reglas del asistente'),
+    h('table',{},h('tbody',{},
+      h('tr',{},h('td',{},'Nombre del emisor'),h('td',{},txt(cfg.issuer,x=>{cfg.issuer=x;}))),
+      h('tr',{},h('td',{},'Validez de la cotización (días)'),h('td',{},num(cfg.validDays,x=>{cfg.validDays=x;},1))),
+      h('tr',{},h('td',{},'Anticipo para iniciar producción (%)'),h('td',{},num(cfg.prepay,x=>{cfg.prepay=x;},1))),
+      h('tr',{},h('td',{},'Un asesor aprueba si el total supera (CLP)'),h('td',{},num(cfg.approvalTotal,x=>{cfg.approvalTotal=x;},0))),
+      h('tr',{},h('td',{},'…o si las unidades llegan a'),h('td',{},num(cfg.approvalQty,x=>{cfg.approvalQty=x;},1))))));
+}
+
+/* ---------- arranque ---------- */
+renderRules(); renderLeads(); renderQuote(null); start();
+</script>
+</body>
+</html>
